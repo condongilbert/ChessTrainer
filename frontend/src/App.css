@@ -24,6 +24,12 @@
   color: white;
 }
 
+.chessboard-wrapper {
+  max-width: 500px;  /* Adjust this value as needed */
+  width: 100%;
+  margin: auto;  /* Centers the board */
+}
+
 .App-link {
   color: #61dafb;
 }
