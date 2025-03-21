@@ -1,8 +1,8 @@
+require("dotenv").config(); // Load environment variables
 const axios = require("axios");
 const { Pool } = require("pg");
-require("dotenv").config();
 
-// Set up database connection
+// PostgreSQL connection using .env variables
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -11,50 +11,55 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-// Lichess API URL
-const LICHESS_API_URL = "https://lichess.org/api/game/export/";
+const gameId = "FbwSGQj3";  
+const url = `https://lichess.org/game/export/${gameId}?moves=true&json=true`;
 
-async function insertGame(gameData) {
-  const { id, players, turns, status } = gameData;
-  const whitePlayer = players.white.name;
-  const blackPlayer = players.black.name;
-
-  const insertQuery = `
-    INSERT INTO games (title, white_player, black_player, moves, status)
-    VALUES ($1, $2, $3, $4, $5)
-  `;
-
+async function fetchGameMoves() {
   try {
-    await pool.query(insertQuery, [
-      id,
-      whitePlayer,
-      blackPlayer,
-      turns, // You can format the moves later based on your needs
-      status,
-    ]);
-    console.log("Game data inserted successfully!");
-  } catch (err) {
-    console.error("Error inserting game data:", err.message);
-  }
-}
-
-async function fetchGame(gameId) {
-  try {
-    const response = await axios.get(`${LICHESS_API_URL}${gameId}`, {
-      headers: {
-        "Accept": "application/x-ndjson",
-      },
+    const response = await axios.get(url, {
+      headers: { "Authorization": `Bearer ${process.env.LICHESS_API_TOKEN}` },
     });
 
-    const game = response.data;
-    console.log("✅ Found Game:", game);
+    const gameData = response.data;
+    console.log("Game Data Retrieved:", gameData);
 
-    // Insert game data into database
-    await insertGame(game);
+    if (!gameData.moves) {
+      console.log("No moves found.");
+      return;
+    }
+
+    // Extracting relevant fields
+    const { id, players, opening, moves, status } = gameData;
+    const whitePlayer = players.white.name;
+    const blackPlayer = players.black.name;
+    const whiteRating = players.white.rating;
+    const blackRating = players.black.rating;
+    const openingName = opening ? opening.name : "Unknown";
+    const result = status;
+
+    // Store in PostgreSQL
+    await saveGameToDatabase(id, whitePlayer, blackPlayer, whiteRating, blackRating, openingName, moves, result);
+    
   } catch (error) {
-    console.error("Error fetching game:", error.message);
+    console.error("Error fetching game data:", error.message);
   }
 }
 
-// Use the game ID from the provided link
-fetchGame("FbwSGQj3");
+// Function to insert game data into PostgreSQL
+async function saveGameToDatabase(gameId, white, black, whiteRating, blackRating, opening, moves, result) {
+  try {
+    const query = `
+      INSERT INTO lichess_games (game_id, white_player, black_player, white_rating, black_rating, opening, moves, result)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (game_id) DO NOTHING;
+    `;
+
+    await pool.query(query, [gameId, white, black, whiteRating, blackRating, opening, moves, result]);
+    console.log(`Game ${gameId} stored successfully.`);
+  } catch (error) {
+    console.error("Error saving game to database:", error.message);
+  }
+}
+
+// Fetch and store the game
+fetchGameMoves();
