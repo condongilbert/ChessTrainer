@@ -32,9 +32,9 @@ app.get("/api/test-db", async (req, res) => {
 });
 
 // API endpoint to get all games
-app.get("/games", async (req, res) => {
+app.get("/lichess_games", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM games;");
+    const result = await pool.query("SELECT * FROM lichess_games;");
     res.status(200).json(result.rows);  // Respond with the games data
   } catch (err) {
     console.error(err);
