@@ -25,9 +25,11 @@ cd chess-trainer
 
 npm install
 
-    Start the development server:
+    Start the development server: node server.js
 
     npm run dev
+
+    npm start
 
 📜 License
 
