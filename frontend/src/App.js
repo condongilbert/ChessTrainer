@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { BrowserRouter as Router, Route, Switch, Link } from "react-router-dom";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
+
+
 
 function App() {
   const [game, setGame] = useState(new Chess());
